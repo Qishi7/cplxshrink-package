@@ -12,6 +12,8 @@ Description: Fits paired complex and scalar real Bayesian regressions with
     representation. Provides posterior coefficient summaries and synthetic
     reference tests for the sampling distributions.
 License: GPL-3
+URL: https://github.com/chenghanyustats/cplxshrink-package
+BugReports: https://github.com/chenghanyustats/cplxshrink-package/issues
 Encoding: UTF-8
 Depends: R (>= 4.1.0)
 Imports: Rcpp, stats

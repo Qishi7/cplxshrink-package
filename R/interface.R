@@ -35,6 +35,9 @@
 #' `C` has blocks `(1+Re(relation))*I`, `Im(relation)*I`, and
 #' `(1-Re(relation))*I`. Thus complex covariance is `2*s*I` and relation is
 #' `2*s*relation*I`. Coefficient pair covariance is `s*w[j]*I`.
+#' The noise scale `s` is the manuscript's real-component variance sigma-squared;
+#' `a_s` and `b_s` are its inverse-gamma hyperparameters a_sigma and b_sigma.
+#' Lasso `delta` is the manuscript's delta_L, the rate for the squared rate L.
 #' Gamma parameters use shape and rate; inverse gamma has density proportional
 #' to `x^(-a-1)*exp(-b/x)`. Student local scales are inverse gamma. Lasso
 #' local scales have gamma shape `(d+1)/2`, rate `L/2`, with

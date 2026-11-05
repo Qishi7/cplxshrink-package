@@ -8,11 +8,14 @@ No intercept is added automatically; include a column of ones if needed
 ## Install
 
 A working R installation (>= 4.1) and C++ toolchain are required.
-In R, install the dependencies:
+In R, install from GitHub:
 
 ```r
-install.packages(c("Rcpp", "RcppArmadillo"))
+install.packages("remotes")  # if needed
+remotes::install_github("chenghanyustats/cplxshrink-package")
 ```
+
+For source installation, first install `Rcpp` and `RcppArmadillo`.
 
 From a terminal, install the supplied source archive:
 
@@ -28,12 +31,14 @@ this source folder. To run its tests, also install `testthat` and `jsonlite`.
 ```r
 library(cplxshrink)
 set.seed(42)
-X <- matrix(rnorm(500) + 1i * rnorm(500), 100, 5)
+n <- 100
+p <- 5
+X <- matrix(rnorm(n * p), n, p)
 beta <- c(1 + 1i, -0.5 + 0.5i, 0, 0, 0)
 y <- drop(X %*% beta) + rnorm(100) + 1i * rnorm(100)
 fit <- cplx_shrink(y, X, prior = "gdp")
-coefficient_summary(fit)
 coef(fit)
+coefficient_summary(fit)
 ```
 
 `coef(fit)` returns posterior mean coefficients, complex for a complex fit
@@ -45,13 +50,54 @@ imaginary columns), `fit$w`, `fit$s`, and `fit$hyper`.
 Choose `prior = "student"` (Student-t, the default), `"lasso"` (Bayesian
 lasso), or `"gdp"` (generalized double Pareto). Use `model = "real"` for
 real data. Optional `relation`, `hyper`, `iterations`, `warm`, `thin`, and
-`start` arguments retain their existing meanings; see `?cplx_shrink` for
-parameter definitions. Set a seed immediately before fitting for repeatability.
+`start` arguments control fixed error relation, prior hyperparameters, total
+iterations, warmup, thinning, and initial values; see `?cplx_shrink` for details. Set a seed immediately before fitting for repeatability.
 After installation, run the bundled demonstration:
 
 ```r
 source(system.file("examples", "demo.R", package = "cplxshrink", mustWork = TRUE))
 ```
+
+## Manuscript calibration (separate from the generic demo)
+
+The primary simulation comparison uses real `X`, proper errors (`relation = 0`),
+and `a_s = b_s = 0.5` for each error variance. Specify the following `hyper`
+lists explicitly; package defaults are unchanged.
+
+| Prior | Paired complex fit (`model = "complex"`) | Each scalar fit (`model = "real"`) |
+| --- | --- | --- |
+| Student-t | `list(a_s=0.5, b_s=0.5, nu=1)` | `list(a_s=0.5, b_s=0.5, a_tau=1, b_tau=1)` |
+| Lasso | `list(a_s=0.5, b_s=0.5, r=0.5, delta=0.5)` | `list(a_s=0.5, b_s=0.5, r=0.5, delta=0.8966996574)` |
+| GDP | `list(a_s=0.5, b_s=0.5, alpha=1, eta=1)` | `list(a_s=0.5, b_s=0.5, alpha=1, eta=1.3403844863)` |
+
+For example, using `y` and real `X` from the generic demo, the calibrated
+independent scalar GDP fits use:
+
+```r
+paper_gdp <- list(a_s=0.5, b_s=0.5, alpha=1, eta=1.3403844863)
+fit_R <- cplx_shrink(Re(y), X, prior="gdp", model="real", hyper=paper_gdp)
+fit_I <- cplx_shrink(Im(y), X, prior="gdp", model="real", hyper=paper_gdp)
+```
+
+M-ReIm requires two independent fits. M-Scalar-Pooled instead requires an
+explicit block-diagonal real design and stacked response, sharing one error
+variance and, for lasso, one global rate. A single ordinary fitting call does
+not construct these simulation strategies. These parameter examples do not
+supply the paper's datasets, seed mapping, four-chain schedules, diagnostics,
+scoring, or full ablation and fMRI workflows. For the H1 sensitivity only,
+the scalar lasso uses `delta=0.5` and scalar GDP uses `eta=1`.
+
+## Parameter notation
+
+The package's noise variance `s` is the manuscript's sigma-squared (\(\sigma^2\)),
+the variance of each real error component, not total complex variance.
+`a_s` and `b_s` correspond to \(a_\sigma\) and \(b_\sigma\), with
+`s ~ IG(a_s, b_s)` and density proportional to `s^(-a_s-1)*exp(-b_s/s)`.
+`w` denotes the local scale. Complex Student `nu` is \(\nu\); scalar Student
+`a_tau` and `b_tau` are the shape and scale of the inverse-gamma local scale
+(`a_tau=b_tau=1` gives the paper's scalar t with two degrees of freedom).
+Lasso `delta` is \(\delta_L\), the rate in `L ~ Gamma(r, delta)`;
+GDP `alpha` and `eta` are the shape and rate in `lambda[j] ~ Gamma(alpha, eta)`.
 
 ## Limits
 

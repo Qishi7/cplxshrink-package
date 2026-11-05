@@ -66,6 +66,9 @@ In real coordinates the likelihood covariance is \code{s * C}, where complex
 \code{C} has blocks \code{(1+Re(relation))*I}, \code{Im(relation)*I}, and
 \code{(1-Re(relation))*I}. Thus complex covariance is \code{2*s*I} and relation is
 \code{2*s*relation*I}. Coefficient pair covariance is \code{s*w[j]*I}.
+The noise scale \code{s} is the manuscript's real-component variance sigma-squared;
+\code{a_s} and \code{b_s} are its inverse-gamma hyperparameters a_sigma and b_sigma.
+Lasso \code{delta} is the manuscript's delta_L, the rate for the squared rate L.
 Gamma parameters use shape and rate; inverse gamma has density proportional
 to \code{x^(-a-1)*exp(-b/x)}. Student local scales are inverse gamma. Lasso
 local scales have gamma shape \code{(d+1)/2}, rate \code{L/2}, with
