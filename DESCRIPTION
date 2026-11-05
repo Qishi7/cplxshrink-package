@@ -1,0 +1,22 @@
+Package: cplxshrink
+Type: Package
+Title: Paired Bayesian Shrinkage for Complex Regression
+Version: 0.1.0
+Authors@R: c(person("Cheng-Han", "Yu", role = c("aut", "cre"),
+    email = "cheng-han.yu@marquette.edu",
+    comment = c(ORCID = "0000-0002-6977-6400")),
+    person("Qishi", "Zhan", role = "aut"))
+Description: Fits paired complex and scalar real Bayesian regressions with
+    Student-t, lasso, and generalized double Pareto Gaussian scale mixtures.
+    Complex regression is computed through its exact structured real
+    representation. Provides posterior coefficient summaries and synthetic
+    reference tests for the sampling distributions.
+License: GPL-3
+Encoding: UTF-8
+Depends: R (>= 4.1.0)
+Imports: Rcpp, stats
+LinkingTo: Rcpp, RcppArmadillo
+Suggests: testthat (>= 3.0.0), jsonlite
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0
+Roxygen: list(markdown = TRUE)
