@@ -15,7 +15,7 @@ coefficient_summary(fit, level = 0.95)
 Data frame of real-coordinate posterior means, SDs, and marginal
 interval endpoints. These marginal intervals are not the joint
 predictor-selection regions. For complex posterior mean coefficients,
-use \code{coef(fit)}.
+use \code{coef(fit)}. At least two finite draws are required.
 }
 \description{
 Summarize Posterior Coefficients

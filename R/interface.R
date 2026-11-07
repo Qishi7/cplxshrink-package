@@ -84,6 +84,8 @@ cplx_shrink <- function(y, X, prior = c("student", "lasso", "gdp"),
     complex_model = model == "complex", rho = relation, iterations = iterations,
     warm = warm, thin = thin, start = start
   ), hyper))
+  out$design <- list(n = nrow(as.matrix(X)), p = ncol(as.matrix(X)),
+                     columns = colnames(as.matrix(X)))
   out$diagnostics <- list(
     draws_finite = all(is.finite(out$draws)),
     retained_draws = nrow(out$draws), convergence_assessed = FALSE
@@ -98,19 +100,14 @@ cplx_shrink <- function(y, X, prior = c("student", "lasso", "gdp"),
 #' @return Data frame of real-coordinate posterior means, SDs, and marginal
 #'   interval endpoints. These marginal intervals are not the joint
 #'   predictor-selection regions. For complex posterior mean coefficients,
-#'   use `coef(fit)`.
+#'   use `coef(fit)`. At least two finite draws are required.
 #' @export
 coefficient_summary <- function(fit, level = 0.95) {
-  if (!inherits(fit, "cplxshrink_fit")) stop("fit must be a cplxshrink fit")
-  if (length(level) != 1L || !is.numeric(level) || is.complex(level) ||
-    !is.finite(level) || level <= 0 || level >= 1) {
-    stop("invalid interval level")
-  }
-  q <- apply(fit$beta, 2, stats::quantile, probs = c((1 - level) / 2, (1 + level) / 2), names = FALSE)
-  data.frame(
-    parameter = colnames(fit$beta), mean = colMeans(fit$beta),
-    sd = apply(fit$beta, 2, stats::sd), lower = q[1, ], upper = q[2, ], row.names = NULL
-  )
+  .validate_fit(fit, 2L)
+  out <- .summarize_matrix(fit$beta, level)
+  data.frame(parameter = if (is.null(colnames(fit$beta)))
+    paste0("beta", seq_len(ncol(fit$beta))) else colnames(fit$beta),
+    out[, c("mean", "sd", "lower", "upper"), drop = FALSE], row.names = NULL)
 }
 
 #' Posterior Mean Coefficients
