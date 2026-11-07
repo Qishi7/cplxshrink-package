@@ -1,0 +1,11 @@
+Official fork: Qishi7/cplxshrink-package
+Parent: chenghanyustats/cplxshrink-package
+Default main: d985957c4254593ae2cc5c449d6dc3d108dd1b5b (unchanged)
+Development branch: feature/posterior-interface-v02
+Code commit: 0bacca0dff5d5a199b1521380d115270819913a7
+cplxrv restoration commit: 43e147b9d6eb71985cfa71cb25ad7d4ee320213d
+cplxrv original and restored tree: 1d1068953da8db030e9c8252cd7ca5337bdab9ba
+Restored tree equality: PASS
+Intervening commits preserved as ancestors: PASS
+No upstream write or pull request: PASS
+No force-push/history rewrite: PASS
