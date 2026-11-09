@@ -1,116 +1,106 @@
 # cplxshrink
 
-Bayesian shrinkage regression for complex data with a shared local scale for
-each real/imaginary coefficient pair. Scalar real regression is also available.
-No intercept is added automatically; include a column of ones if needed
-(the intercept coefficient is then subject to the same shrinkage prior).
+Bayesian shrinkage regression for real and complex-valued data in R.
+Complex coefficients share a local shrinkage scale across their real and
+imaginary components.
 
-## Install
+- Student-t, Bayesian lasso and generalized double Pareto priors.
+- Posterior coefficient and magnitude summaries.
+- Reproducible multiple chains with R-hat, effective sample size and Monte Carlo error diagnostics.
+- Conditional-mean and posterior-predictive draws.
+- Summary, trace and density plotting methods.
 
-A working R installation (>= 4.1) and C++ toolchain are required.
-In R, install from GitHub:
+## Installation
+
+Requires R >= 4.1 and a C++ toolchain.
 
 ```r
-install.packages("remotes")  # if needed
+install.packages("remotes")
 remotes::install_github("chenghanyustats/cplxshrink-package")
+library(cplxshrink)
 ```
 
-For source installation, first install `Rcpp` and `RcppArmadillo`.
-
-From a terminal, install the supplied source archive:
-
-```sh
-R CMD INSTALL cplxshrink_0.1.0.tar.gz
-```
-
-Alternatively, run `R CMD INSTALL cplxshrink` from the directory containing
-this source folder. To run its tests, also install `testthat` and `jsonlite`.
-
-## Fit and summarize
+## Quick start
 
 ```r
-library(cplxshrink)
 set.seed(42)
 n <- 100
 p <- 5
 X <- matrix(rnorm(n * p), n, p)
 beta <- c(1 + 1i, -0.5 + 0.5i, 0, 0, 0)
-y <- drop(X %*% beta) + rnorm(100) + 1i * rnorm(100)
+y <- drop(X %*% beta) + rnorm(n) + 1i * rnorm(n)
+
 fit <- cplx_shrink(y, X, prior = "gdp")
 coef(fit)
 coefficient_summary(fit)
+magnitude_summary(fit)
+summary(fit)
 ```
 
-`coef(fit)` returns posterior mean coefficients, complex for a complex fit
-and real for a real fit. `coefficient_summary()` gives means, standard
-deviations, and marginal central intervals for each real and imaginary
-coordinate. Draws remain available in `fit$beta` (real columns followed by
-imaginary columns), `fit$w`, `fit$s`, and `fit$hyper`.
+Choose `prior = "student"`, `"lasso"` or `"gdp"`. For scalar real regression,
+use `model = "real"` with a real response and design matrix.
 
-Choose `prior = "student"` (Student-t, the default), `"lasso"` (Bayesian
-lasso), or `"gdp"` (generalized double Pareto). Use `model = "real"` for
-real data. Optional `relation`, `hyper`, `iterations`, `warm`, `thin`, and
-`start` arguments control fixed error relation, prior hyperparameters, total
-iterations, warmup, thinning, and initial values; see `?cplx_shrink` for details. Set a seed immediately before fitting for repeatability.
-After installation, run the bundled demonstration:
+`magnitude_summary()` summarizes the magnitude of each posterior coefficient
+draw. This differs from taking the magnitude of the posterior mean coefficient.
+
+## Multiple-chain diagnostics
 
 ```r
-source(system.file("examples", "demo.R", package = "cplxshrink", mustWork = TRUE))
+chains <- cplx_shrink_chains(
+  y, X, prior = "gdp", chains = 4, seed = 123,
+  iterations = 2000, warm = 500,
+  starts = lapply(c(0.2, 0.5, 1, 2), function(s) list(s = s))
+)
+
+mcmc_diagnostics(chains)
+summary(chains)
+plot(chains, parameters = c("beta_re1", "s"), type = "trace")
+plot(chains, parameters = "beta_re1", type = "density")
 ```
 
-## Manuscript calibration (separate from the generic demo)
+Diagnostics include rank-normalized R-hat, bulk and tail ESS, and MCSE of
+posterior means, computed with the `posterior` package. Inspect multiple chains
+and Monte Carlo error before drawing substantive conclusions.
 
-The primary simulation comparison uses real `X`, proper errors (`relation = 0`),
-and `a_s = b_s = 0.5` for each error variance. Specify the following `hyper`
-lists explicitly; package defaults are unchanged.
-
-| Prior | Paired complex fit (`model = "complex"`) | Each scalar fit (`model = "real"`) |
-| --- | --- | --- |
-| Student-t | `list(a_s=0.5, b_s=0.5, nu=1)` | `list(a_s=0.5, b_s=0.5, a_tau=1, b_tau=1)` |
-| Lasso | `list(a_s=0.5, b_s=0.5, r=0.5, delta=0.5)` | `list(a_s=0.5, b_s=0.5, r=0.5, delta=0.8966996574)` |
-| GDP | `list(a_s=0.5, b_s=0.5, alpha=1, eta=1)` | `list(a_s=0.5, b_s=0.5, alpha=1, eta=1.3403844863)` |
-
-For example, using `y` and real `X` from the generic demo, the calibrated
-independent scalar GDP fits use:
+## Prediction
 
 ```r
-paper_gdp <- list(a_s=0.5, b_s=0.5, alpha=1, eta=1.3403844863)
-fit_R <- cplx_shrink(Re(y), X, prior="gdp", model="real", hyper=paper_gdp)
-fit_I <- cplx_shrink(Im(y), X, prior="gdp", model="real", hyper=paper_gdp)
+newX <- X[1:2, , drop = FALSE]
+
+# Conditional means: coefficient uncertainty.
+mean_draws <- predict(fit, newX, type = "mean")
+
+# New responses: coefficient uncertainty and observation noise.
+response_draws <- predict(fit, newX, type = "predictive", seed = 45)
+predict(fit, newX, type = "predictive", seed = 45, summary = TRUE)
 ```
 
-M-ReIm requires two independent fits. M-Scalar-Pooled instead requires an
-explicit block-diagonal real design and stacked response, sharing one error
-variance and, for lasso, one global rate. A single ordinary fitting call does
-not construct these simulation strategies. These parameter examples do not
-supply the paper's datasets, seed mapping, four-chain schedules, diagnostics,
-scoring, or full ablation and fMRI workflows. For the H1 sensitivity only,
-the scalar lasso uses `delta=0.5` and scalar GDP uses `eta=1`.
+Supply an unstacked design matrix in the original column order. Complex
+prediction summaries include real, imaginary and draw-wise magnitude summaries.
 
-## Parameter notation
+## Model conventions
 
-The package's noise variance `s` is the manuscript's sigma-squared (\(\sigma^2\)),
-the variance of each real error component, not total complex variance.
-`a_s` and `b_s` correspond to \(a_\sigma\) and \(b_\sigma\), with
-`s ~ IG(a_s, b_s)` and density proportional to `s^(-a_s-1)*exp(-b_s/s)`.
-`w` denotes the local scale. Complex Student `nu` is \(\nu\); scalar Student
-`a_tau` and `b_tau` are the shape and scale of the inverse-gamma local scale
-(`a_tau=b_tau=1` gives the paper's scalar t with two degrees of freedom).
-Lasso `delta` is \(\delta_L\), the rate in `L ~ Gamma(r, delta)`;
-GDP `alpha` and `eta` are the shape and rate in `lambda[j] ~ Gamma(alpha, eta)`.
+- No intercept or preprocessing is added automatically. An explicitly included intercept is shrunk.
+- Complex likelihood relation `rho` is fixed, with `Mod(rho) < 1`.
+- Noise scale `s` gives total complex error variance `2*s`; real-model error variance is `s`.
+- Coefficient and prediction intervals are marginal intervals.
+- Package defaults differ from the manuscript's matched-prior calibration.
 
-## Limits
+See the [model conventions](docs/model-conventions.md),
+[manuscript calibration](docs/manuscript-calibration.md) and `?cplx_shrink`
+for details on covariance, priors, draw indexing and prediction.
 
-The likelihood relation is fixed, with modulus below one; coefficient priors
-are proper. The noise scale `s` is real-component variance, so complex noise
-covariance is `2*s*I`. Gamma distributions use shape and rate. Hyperparameter
-defaults depend on the model; they do not automatically implement the paper's
-matched-prior comparisons. The model conventions are detailed in the function help.
+## Examples and local checks
 
-A short run demonstrates code use; it does not establish MCMC convergence or
-reproduce every manuscript simulation or the complete fMRI analysis. The
-package does not implement likelihood-relation learning or the full structural
-ablation workflows. Assess convergence and Monte
-Carlo error with suitable multiple-chain diagnostics for substantive inference.
-Marginal coefficient intervals are not joint selection regions. This minimal
-package contains no human data, empirical outputs, or full replication workflows.
+Run the installed feature demonstration:
+
+```r
+source(system.file("examples", "validate_new_features.R",
+                   package = "cplxshrink", mustWork = TRUE))
+```
+
+From the repository root, run the tests with:
+
+```r
+testthat::test_local(".")
+```

@@ -1,2 +1,6 @@
 ^LICENSE$
 ^LICENSE\.md$
+^\.github$
+^\.gitignore$
+^examples$
+^docs$
